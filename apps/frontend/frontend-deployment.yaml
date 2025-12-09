@@ -1,0 +1,23 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ai-ui-frontend
+  labels:
+    app: ai-ui-frontend
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ai-ui-frontend
+  template:
+    metadata:
+      labels:
+        app: ai-ui-frontend
+    spec:
+      containers:
+      - name: ai-ui-frontend
+        image: ghcr.io/umeshpoojariaws/ai-ui-frontend:ea1199637543ee476818e642d6583c8fabfe1482 # Pulled from GitHub Container Registry
+        ports:
+        - containerPort: 3000
+      imagePullSecrets:
+        - name: ghcr-login-secret # Reference the Kubernetes secret for GHCR

@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: ai-ui-frontend-service
+  labels:
+    app: ai-ui-frontend
+spec:
+  selector:
+    app: ai-ui-frontend
+  ports:
+  - protocol: TCP
+    port: 80
+    targetPort: 3000
+    nodePort: 30000 # Map to hostPort 30080 as configured in kind-config.yaml
+  type: NodePort # Use NodePort for Kind to expose on host
