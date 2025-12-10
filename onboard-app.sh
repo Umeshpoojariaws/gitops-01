@@ -14,8 +14,8 @@ fi
 GITOPS_REPO_PATH="."
 ARGO_APP_OVERLAY_PATH="$GITOPS_REPO_PATH/applications/overlays/$APP_NAME-$ENV"
 ARGO_APP_TEMPLATE="$GITOPS_REPO_PATH/applications/overlays/template-app/kustomization-template.yaml"
-APP_HELM_VALUES_PATH="$GITOPS_REPO_PATH/apps/$APP_NAME"
-APP_HELM_VALUES_TEMPLATE="$GITOPS_REPO_PATH/apps/template-app/values-template.yaml"
+APP_TEMPLATES_SOURCE_PATH="$GITOPS_REPO_PATH/apps/template-app"
+APP_TARGET_PATH="$GITOPS_REPO_PATH/apps/$APP_NAME"
 
 echo "Onboarding application '$APP_NAME' for environment '$ENV'..."
 
@@ -45,26 +45,29 @@ patches:
         path: /spec/destination/namespace
         value: $ENV
       - op: replace
-        path: /spec/source/helm/valueFiles
-        value:
-          - ../../../apps/$APP_NAME/values-$ENV.yaml
-      - op: replace
         path: /spec/source/path
         value: apps/$APP_NAME
 EOF
 echo "Customized ArgoCD Application overlay for $APP_NAME in $ENV."
 
-# --- Create directory and copy template for application Helm values ---
-mkdir -p "$APP_HELM_VALUES_PATH"
-if [ -f "$APP_HELM_VALUES_TEMPLATE" ]; then
-  cp "$APP_HELM_VALUES_TEMPLATE" "$APP_HELM_VALUES_PATH/values-$ENV.yaml"
-  echo "Copied Helm values template to: $APP_HELM_VALUES_PATH/values-$ENV.yaml"
-  # Optional: Customize generic values file if needed, e.g., default replica count
-  # sed -i '' "s|REPLACE_APP_NAME|$APP_NAME|g" "$APP_HELM_VALUES_PATH/values-$ENV.yaml"
-else
-  echo "Warning: Helm values template not found at $APP_HELM_VALUES_TEMPLATE. Please create it manually."
-fi
+# --- Create directory and copy template for application Deployment and Service ---
+mkdir -p "$APP_TARGET_PATH"
+echo "Created directory: $APP_TARGET_PATH"
 
+if [ -d "$APP_TEMPLATES_SOURCE_PATH" ]; then
+  cp -R "$APP_TEMPLATES_SOURCE_PATH"/* "$APP_TARGET_PATH/"
+  echo "Copied all templates from $APP_TEMPLATES_SOURCE_PATH to: $APP_TARGET_PATH"
+  # Customize generic deployment/service files
+  for file in "$APP_TARGET_PATH"/*.yaml; do
+    sed -i '' "s|ai-ui-backend|$APP_NAME|g" "$file"
+    sed -i '' "s|ai-ui-backend-service|$APP_NAME-service|g" "$file"
+    # Placeholder for image customization if needed, e.g.:
+    # sed -i '' "s|ghcr.io/umeshpoojariaws/ai-ui-backend:.*|ghcr.io/umeshpoojariaws/$APP_NAME:$IMAGE_TAG|g" "$file"
+  done
+else
+  echo "Error: Application templates source directory not found at $APP_TEMPLATES_SOURCE_PATH."
+  exit 1
+fi
 
 # --- Apply the new ArgoCD Application to the cluster ---
 echo "Applying ArgoCD Application for $APP_NAME in $ENV..."
